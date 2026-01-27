@@ -811,8 +811,8 @@ def demo():
     )
     
     # Save figure
-    fig.savefig('./outputs/gridworld_demo.png', dpi=150, bbox_inches='tight')
-    print("Saved visualization to ./outputs/gridworld_demo.png")
+    fig.savefig('./outputs/gridworld/gridworld_demo.png', dpi=150, bbox_inches='tight')
+    print("Saved visualization to ./outputs/gridworld/gridworld_demo.png")
     
     plt.close(fig)
     
