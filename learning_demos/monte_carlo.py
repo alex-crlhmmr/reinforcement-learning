@@ -1,34 +1,49 @@
 from envs.gridworld import GridWorld
-from utils.utils import load_policy
+from utils.utils import rollout_episode, load_policy
 import matplotlib.pyplot as plt
 from typing import Tuple, List
 import numpy as np
 
 
 
-def rollout_episode(env: GridWorld, pi: np.ndarray) -> Tuple[List[int], List[float], List[int]]:
-    states: List[int] = []
-    rewards: List[float] = []
-    actions: List[int] = []
+def first_visit_mc_prediction(
+        env: GridWorld, 
+        pi: np.ndarray, 
+        num_episodes: int = 5000, 
+        gamma: float = 0.9) -> np.ndarray:
+    """
+    Estimate the value function V^π using First-Visit Monte Carlo prediction.
 
-    s = env.reset()
-    done = False
+    For each episode, for each state s, only the *first occurrence* of s in that
+    episode is used to update V(s). The estimate is the sample mean of returns.
 
-    while not done:
-        states.append(s)
+    Parameters
+    ----------
+    env : GridWorld
+        The GridWorld environment instance.
+    pi : np.ndarray
+        Policy to evaluate, shape (n_states, n_actions).
+        pi[s, a] = probability of taking action a in state s.
+    num_episodes : int, optional
+        Number of episodes to sample, by default 5000.
+    gamma : float, optional
+        Discount factor, by default 0.9.
 
-        a = int(env.rng.choice(env.n_actions, p=pi[s]))
-        s, r, terminated, truncated, _ = env.step(a)
-        done = terminated or truncated
+    Returns
+    -------
+    np.ndarray
+        Estimated value function V^π(s), shape (n_states,).
 
-        actions.append(a)
-        rewards.append(float(r))
-
-    return states, rewards, actions
-
-
-
-def first_visit_mc_prediction(env: GridWorld, pi: np.ndarray, num_episodes: int = 5000, gamma: float = 0.9) -> np.ndarray:
+    Notes
+    -----
+    - Uses an incremental sample-average estimator:
+        V(s) = (1/N(s)) * sum_i G_i(s)
+      where G_i(s) is the return observed on the i-th first-visit to s.
+    - Returns are computed efficiently in O(T) per episode via a backward pass:
+        G_t = R_{t+1} + gamma * G_{t+1}.
+    - First-visit MC can have high variance and may converge slowly, especially
+      in large or stochastic environments.
+    """
     N = np.zeros(env.n_states, dtype=np.int64)   # visit counts
     G_sum = np.zeros(env.n_states, dtype=np.float64)  # sum of returns
     V_pi = np.zeros(env.n_states, dtype=np.float64)
@@ -57,7 +72,44 @@ def first_visit_mc_prediction(env: GridWorld, pi: np.ndarray, num_episodes: int 
     return V_pi
 
 
-def every_visit_mc_prediction(env: GridWorld, pi: np.ndarray, num_episodes: int = 5000, gamma: float = 0.9) -> np.ndarray:
+def every_visit_mc_prediction(
+        env: GridWorld, pi: 
+        np.ndarray, num_episodes: int = 5000, 
+        gamma: float = 0.9) -> np.ndarray:
+    """
+    Estimate the value function V^π using Every-Visit Monte Carlo prediction.
+
+    For each episode, for each state s, *every occurrence* of s in that episode
+    is used to update V(s). The estimate is the sample mean of returns over
+    all visits.
+
+    Parameters
+    ----------
+    env : GridWorld
+        The GridWorld environment instance.
+    pi : np.ndarray
+        Policy to evaluate, shape (n_states, n_actions).
+        pi[s, a] = probability of taking action a in state s.
+    num_episodes : int, optional
+        Number of episodes to sample, by default 5000.
+    gamma : float, optional
+        Discount factor, by default 0.9.
+
+    Returns
+    -------
+    np.ndarray
+        Estimated value function V^π(s), shape (n_states,).
+
+    Notes
+    -----
+    - Uses an incremental sample-average estimator across *all* visits:
+        V(s) = (1/N(s)) * sum_i G_i(s)
+      where G_i(s) is the return observed on the i-th visit to s (not just first).
+    - Returns are computed efficiently in O(T) per episode via a backward pass.
+    - Every-visit MC often has lower variance than first-visit because it uses
+      more samples per episode, but it can overweight states that appear many
+      times within long episodes.
+    """
     N = np.zeros(env.n_states, dtype=np.int64)   # visit counts
     G_sum = np.zeros(env.n_states, dtype=np.float64)  # sum of returns
     V_pi = np.zeros(env.n_states, dtype=np.float64)
@@ -84,14 +136,65 @@ def every_visit_mc_prediction(env: GridWorld, pi: np.ndarray, num_episodes: int 
 
 
 def first_visit_mc_prediction_with_history(
-    env: GridWorld,
-    pi: np.ndarray,
-    V_ref: np.ndarray,
-    num_episodes: int = 5000,
-    gamma: float = 0.9,
-    eval_every: int = 100,
-    min_visits: int = 10,
-):
+        env: GridWorld,
+        pi: np.ndarray,
+        V_ref: np.ndarray,
+        num_episodes: int = 5000,
+        gamma: float = 0.9,
+        eval_every: int = 100,
+        min_visits: int = 10,) -> Tuple[np.ndarray, dict]:
+    """
+    First-Visit Monte Carlo prediction with convergence diagnostics over time.
+
+    This function estimates V^π using first-visit MC, and periodically evaluates
+    how close the current estimate is to a reference value function V_ref.
+    It records RMSE/MAE (on sufficiently visited states) and coverage over episodes.
+
+    Parameters
+    ----------
+    env : GridWorld
+        The GridWorld environment instance.
+    pi : np.ndarray
+        Policy to evaluate, shape (n_states, n_actions).
+        pi[s, a] = probability of taking action a in state s.
+    V_ref : np.ndarray
+        Reference value function to compare against (e.g., from DP),
+        shape (n_states,).
+    num_episodes : int, optional
+        Number of episodes to sample, by default 5000.
+    gamma : float, optional
+        Discount factor, by default 0.9.
+    eval_every : int, optional
+        Evaluate diagnostics every eval_every episodes, by default 100.
+    min_visits : int, optional
+        Only include states with at least min_visits (first-visits) in the
+        RMSE/MAE computation, by default 10.
+
+    Returns
+    -------
+    Tuple[np.ndarray, dict]
+        - V_pi : np.ndarray
+            Estimated value function V^π(s), shape (n_states,).
+        - history : dict
+            Diagnostic history containing:
+              * "episodes": np.ndarray of evaluation episode indices
+              * "rmse": np.ndarray of RMSE values
+              * "mae": np.ndarray of MAE values
+              * "coverage": np.ndarray of coverage values
+              * "N": np.ndarray visit counts (first-visit counts per state)
+
+    Notes
+    -----
+    - RMSE/MAE are computed on a *moving subset* of states defined by:
+        non-wall states (env.states),
+        excluding terminal states,
+        and requiring N[s] >= min_visits.
+      Because this subset can expand over time, RMSE/MAE are not guaranteed
+      to decrease monotonically.
+    - Coverage is defined as:
+        (# of eligible states in mask) / (# of non-wall states).
+    - Returns are computed in O(T) per episode via a backward pass.
+    """
     N = np.zeros(env.n_states, dtype=np.int64)
     G_sum = np.zeros(env.n_states, dtype=np.float64)
     V_pi = np.zeros(env.n_states, dtype=np.float64)
@@ -157,14 +260,68 @@ def first_visit_mc_prediction_with_history(
 
 
 def every_visit_mc_prediction_with_history(
-    env: GridWorld,
-    pi: np.ndarray,
-    V_ref: np.ndarray,
-    num_episodes: int = 5000,
-    gamma: float = 0.9,
-    eval_every: int = 100,
-    min_visits: int = 10,
-):
+        env: GridWorld,
+        pi: np.ndarray,
+        V_ref: np.ndarray,
+        num_episodes: int = 5000,
+        gamma: float = 0.9,
+        eval_every: int = 100,
+        min_visits: int = 10,) -> Tuple[np.ndarray, dict]:
+    """
+    Every-Visit Monte Carlo prediction with convergence diagnostics over time.
+
+    This function estimates V^π using every-visit MC, and periodically evaluates
+    how close the current estimate is to a reference value function V_ref.
+    It records RMSE/MAE (on sufficiently visited states) and coverage over episodes.
+
+    Parameters
+    ----------
+    env : GridWorld
+        The GridWorld environment instance.
+    pi : np.ndarray
+        Policy to evaluate, shape (n_states, n_actions).
+        pi[s, a] = probability of taking action a in state s.
+    V_ref : np.ndarray
+        Reference value function to compare against (e.g., from DP),
+        shape (n_states,).
+    num_episodes : int, optional
+        Number of episodes to sample, by default 5000.
+    gamma : float, optional
+        Discount factor, by default 0.9.
+    eval_every : int, optional
+        Evaluate diagnostics every eval_every episodes, by default 100.
+    min_visits : int, optional
+        Only include states with at least min_visits (total visits) in the
+        RMSE/MAE computation, by default 10.
+
+    Returns
+    -------
+    Tuple[np.ndarray, dict]
+        - V_pi : np.ndarray
+            Estimated value function V^π(s), shape (n_states,).
+        - history : dict
+            Diagnostic history containing:
+              * "episodes": np.ndarray of evaluation episode indices
+              * "rmse": np.ndarray of RMSE values
+              * "mae": np.ndarray of MAE values
+              * "coverage": np.ndarray of coverage values
+              * "N": np.ndarray visit counts (every-visit counts per state)
+
+    Notes
+    -----
+    - RMSE/MAE are computed on a *moving subset* of states defined by:
+        non-wall states (env.states),
+        excluding terminal states,
+        and requiring N[s] >= min_visits.
+      Because this subset can expand over time, RMSE/MAE are not guaranteed
+      to decrease monotonically.
+    - Coverage is defined as:
+        (# of eligible states in mask) / (# of non-wall states).
+    - Returns are computed in O(T) per episode via a backward pass.
+    - Compared to first-visit MC, every-visit MC usually reaches the
+      min_visits threshold sooner (higher coverage earlier) because
+      repeated visits within an episode count toward N[s].
+    """
     N = np.zeros(env.n_states, dtype=np.int64)
     G_sum = np.zeros(env.n_states, dtype=np.float64)
     V_pi = np.zeros(env.n_states, dtype=np.float64)
@@ -227,6 +384,27 @@ def every_visit_mc_prediction_with_history(
 
 
 def plot_mc_stabilization(history: dict):
+    """
+    Plot Monte Carlo convergence diagnostics recorded by *_with_history functions.
+
+    Produces two plots:
+      1) RMSE and MAE vs episode number
+      2) Coverage vs episode number
+
+    Parameters
+    ----------
+    history : dict
+        Dictionary returned by first_visit_mc_prediction_with_history or
+        every_visit_mc_prediction_with_history. Expected keys:
+          - "episodes": np.ndarray of evaluation episode indices
+          - "rmse": np.ndarray of RMSE values at those episodes
+          - "mae": np.ndarray of MAE values at those episodes
+          - "coverage": np.ndarray of coverage values at those episodes
+
+    Returns
+    -------
+    None
+    """
     eps = history["episodes"]
     rmse = history["rmse"]
     mae = history["mae"]
@@ -265,6 +443,18 @@ def main():
         slip_prob=float(meta["slip_prob"]),
         seed=None if int(meta["seed"]) == -1 else int(meta["seed"]),
     )
+
+    print(
+        "[WARNING] Monte Carlo policy evaluation is being run on-policy with\n"
+        "          a fixed start-state reset.\n"
+        "          Estimated values V_pi will converge only for states that\n"
+        "          are sufficiently visited under the policy.\n"
+        "          States outside the policy's typical trajectories may have\n"
+        "          high variance or unreliable estimates.\n"
+        "          DP values (V_ref) are unconditioned and serve only as a\n"
+        "          global reference.\n"
+    )
+
 
     V_pi_fv, hist_fv = first_visit_mc_prediction_with_history(
         env, pi_opt, V_ref=V_opt,

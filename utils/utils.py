@@ -1,6 +1,59 @@
 from envs.gridworld import GridWorld
+from typing import Tuple, List
 import numpy as np
 import os
+
+def rollout_episode(env: GridWorld, pi: np.ndarray) -> Tuple[List[int], List[float], List[int]]:
+    """
+    Roll out a single episode in the environment following a fixed policy π.
+
+    The episode starts from env.reset() and proceeds until termination or truncation.
+    Actions are sampled from the provided policy distribution pi[s].
+
+    Parameters
+    ----------
+    env : GridWorld
+        The GridWorld environment instance (provides reset(), step(), rng, etc.)
+    pi : np.ndarray
+        Stochastic policy, shape (n_states, n_actions).
+        pi[s, a] = probability of taking action a in state s.
+
+    Returns
+    -------
+    Tuple[List[int], List[float], List[int]]
+        - states : List[int]
+            Sequence of visited states S_0, S_1, ..., S_{T-1}
+        - rewards : List[float]
+            Sequence of rewards R_1, R_2, ..., R_T (aligned with transitions from states[t])
+            rewards[t] is the reward received after taking an action in states[t]
+        - actions : List[int]
+            Sequence of actions A_0, A_1, ..., A_{T-1}
+
+    Notes
+    -----
+    - The lengths of states, rewards, and actions are all equal to the episode length T.
+    - states[t] corresponds to S_t, actions[t] corresponds to A_t,
+      and rewards[t] corresponds to R_{t+1}.
+    - The policy must define a valid probability distribution for each state visited.
+    """
+    states: List[int] = []
+    rewards: List[float] = []
+    actions: List[int] = []
+
+    s = env.reset()
+    done = False
+
+    while not done:
+        states.append(s)
+
+        a = int(env.rng.choice(env.n_actions, p=pi[s]))
+        s, r, terminated, truncated, _ = env.step(a)
+        done = terminated or truncated
+
+        actions.append(a)
+        rewards.append(float(r))
+
+    return states, rewards, actions
 
 
 def save_policy(path: str, env: GridWorld, pi_opt: np.ndarray, V_opt: np.ndarray, gamma: float):
