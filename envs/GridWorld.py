@@ -738,7 +738,7 @@ def demo():
         height=25,
         width=25,
         wall_density=0.15,
-        num_traps=6,
+        num_traps=30,
         slip_prob=0.2,
         seed=42
     )
