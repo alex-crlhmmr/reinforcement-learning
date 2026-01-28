@@ -1,10 +1,11 @@
-from envs.gridworld import GridWorld
+from envs.base import TabularEnvironment
+from envs.tabular.gridworld import GridWorld
 from utils.utils import save_policy
 import matplotlib.pyplot as plt
 from typing import Tuple
 import numpy as np
 
-def iterative_policy_evaluation(env: GridWorld, pi: np.ndarray, tol: float = 1e-6, max_iter: int = 1000, gamma: float = 0.9) -> np.ndarray:
+def iterative_policy_evaluation(env: TabularEnvironment, pi: np.ndarray, tol: float = 1e-6, max_iter: int = 1000, gamma: float = 0.9) -> np.ndarray:
     """
     Perform iterative policy evaluation to compute the value function V^π
     for a given (fixed) policy under the environment's MDP.
@@ -37,12 +38,15 @@ def iterative_policy_evaluation(env: GridWorld, pi: np.ndarray, tol: float = 1e-
     - Terminal states are assigned value 0.
     - Convergence is checked via the maximum difference between successive value arrays.
     """
-    V = np.zeros(env.n_states)
+
+    nS = max(env.states) + 1
+
+    V = np.zeros(nS)
     
     for iteration in range(max_iter):
         delta = 0.0
         V_new = V.copy()
-        for s in range(env.n_states):
+        for s in env.states:
             if env.is_terminal(s):
                 V_new[s] = 0
                 continue
@@ -72,7 +76,7 @@ def iterative_policy_evaluation(env: GridWorld, pi: np.ndarray, tol: float = 1e-
 
     return V
 
-def policy_iteration(env: GridWorld, tol: float = 1e-6, max_iter: int = 1000, gamma: float = 0.9) -> Tuple[np.ndarray, np.ndarray]:
+def policy_iteration(env: TabularEnvironment, tol: float = 1e-6, max_iter: int = 1000, gamma: float = 0.9) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute the optimal policy and value function using Policy Iteration.
 
@@ -110,14 +114,15 @@ def policy_iteration(env: GridWorld, tol: float = 1e-6, max_iter: int = 1000, ga
     - The returned policy can be used directly with env.render(policy=...)
       after converting to action indices via np.argmax(pi_opt, axis=1)
     """
-    pi = np.full((env.n_states, env.n_actions), 1.0 / env.n_actions)
+    nS = max(env.states) + 1
+    nA = env.n_actions
+    pi = np.full((nS, nA), 1.0 / nA)
 
     for iterations in range(max_iter):
         V = iterative_policy_evaluation(env, pi, tol=tol, max_iter=max_iter, gamma=gamma)
         policy_stable = True
-        pi_new = np.zeros((env.n_states, env.n_actions))
-
-        for s in range(env.n_states):
+        pi_new = np.zeros((nS, nA))
+        for s in env.states:
             if env.is_terminal(s):
                 pi_new[s] = pi[s]
                 continue  
@@ -162,13 +167,13 @@ def main():
 
     # Save optimal policy to file
     save_policy(
-        path="./outputs/policy_iteration/optimal_policy.npz",
+        path="./outputs/gridworld/policy_iteration/optimal_policy.npz",
         env=env,
         pi_opt=pi_opt,
         V_opt=V_opt,
         gamma=0.9
     )
-    print("Saved optimal policy to: ./outputs/policy_iteration/optimal_policy.npz")
+    print("Saved optimal policy to: ./outputs/gridworld/policy_iteration/optimal_policy.npz")
 
     # Reset environment so current_state = start_state
     env.reset()
@@ -186,8 +191,8 @@ def main():
     )
 
     # Save to file
-    fig.savefig("./outputs/policy_iteration/optimal_policy_value.png", dpi=150, bbox_inches='tight')
-    print("Saved optimal policy visualization to: ./outputs/policy_iteration/optimal_policy_value.png")
+    fig.savefig("./outputs/gridworld/policy_iteration/optimal_policy_value.png", dpi=150, bbox_inches='tight')
+    print("Saved optimal policy visualization to: ./outputs/gridworld/policy_iteration/optimal_policy_value.png")
 
     plt.close(fig)
 

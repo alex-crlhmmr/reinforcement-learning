@@ -12,7 +12,6 @@ Features:
 - Gymnasium-style step() interface for model-free methods
 - Matplotlib visualization with value function overlays
 
-Author: RL Learning Project
 """
 
 import numpy as np
@@ -22,6 +21,9 @@ from matplotlib.colors import LinearSegmentedColormap
 from typing import Tuple, Dict, List, Optional, Set
 from collections import deque
 from enum import IntEnum
+
+from envs.base import TabularEnvironment
+
 
 
 class CellType(IntEnum):
@@ -58,7 +60,7 @@ PERPENDICULAR = {
 }
 
 
-class GridWorld:
+class GridWorld(TabularEnvironment):
     """
     A 2D GridWorld environment for reinforcement learning.
     
@@ -129,10 +131,6 @@ class GridWorld:
         
         # Initialize random generator
         self.rng = np.random.default_rng(seed)
-        
-        # State and action spaces
-        self.n_states = height * width
-        self.n_actions = 4
         
         # Generate the grid
         self._generate_grid()
@@ -417,8 +415,8 @@ class GridWorld:
     
     @property
     def actions(self) -> List[int]:
-        """Return list of all actions."""
-        return list(Action)
+        return [int(a) for a in Action]  # [0,1,2,3]
+
     
     @property
     def terminal_states(self) -> Set[int]:

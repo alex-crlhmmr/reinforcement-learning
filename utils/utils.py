@@ -1,4 +1,4 @@
-from envs.gridworld import GridWorld
+from envs.tabular.gridworld import GridWorld
 from typing import Tuple, List
 import numpy as np
 import os

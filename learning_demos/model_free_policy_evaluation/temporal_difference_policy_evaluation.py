@@ -1,4 +1,4 @@
-from envs.gridworld import GridWorld
+from envs.tabular.gridworld import GridWorld
 from utils.utils import load_policy
 from typing import Tuple, Dict
 import matplotlib.pyplot as plt
@@ -35,7 +35,9 @@ def td0_learning(
     np.ndarray
         Learned value function V_pi (n_states,).
     """
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    V_pi = np.zeros(nS, dtype=np.float64)
+
     s = env.reset()
 
     for _ in range(int(max_iter)):
@@ -104,10 +106,11 @@ def td0_learning_with_history(
               * "coverage": np.ndarray of coverage values
               * "N": np.ndarray visit/update counts per state
     """
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    V_pi = np.zeros(nS, dtype=np.float64)
 
     # N[s] counts how many TD updates were applied to state s
-    N = np.zeros(env.n_states, dtype=np.int64)
+    N = np.zeros(nS, dtype=np.int64)
 
     steps = []
     rmse_hist = []
@@ -128,7 +131,7 @@ def td0_learning_with_history(
         s = env.reset() if done else next_state
 
         if t % eval_every == 0 or t == 1:
-            mask = np.zeros(env.n_states, dtype=bool)
+            mask = np.zeros(nS, dtype=bool)
             for st in env.states:
                 if env.is_terminal(st):
                     continue
@@ -172,9 +175,10 @@ def td_lambda_learning(
     max_iter: int = 10_000,
     gamma: float = 0.9,) -> np.ndarray:
     
+    nS = max(env.states) + 1
     
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
-    e = np.zeros(env.n_states, dtype=np.float64)
+    V_pi = np.zeros(nS, dtype=np.float64)
+    e = np.zeros(nS, dtype=np.float64)
     s = env.reset()
 
     for _ in range(int(max_iter)):
@@ -199,7 +203,6 @@ def td_lambda_learning(
     return V_pi
 
 
-
 def td_lambda_learning_with_history(
     env: GridWorld,
     pi: np.ndarray,
@@ -215,13 +218,14 @@ def td_lambda_learning_with_history(
     TD(lambda) policy evaluation with eligibility traces + diagnostics,
     compatible with plot_td_stabilization(history).
     """
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    V_pi = np.zeros(nS, dtype=np.float64)
 
     # eligibility trace
-    e = np.zeros(env.n_states, dtype=np.float64)
+    e = np.zeros(nS, dtype=np.float64)
 
     # N[s] counts how many updates were "triggered" from state s being current
-    N = np.zeros(env.n_states, dtype=np.int64)
+    N = np.zeros(nS, dtype=np.int64)
 
     steps = []
     rmse_hist = []
@@ -256,7 +260,7 @@ def td_lambda_learning_with_history(
 
         # diagnostics (same structure as your TD(0) with_history)
         if t % eval_every == 0 or t == 1:
-            mask = np.zeros(env.n_states, dtype=bool)
+            mask = np.zeros(nS, dtype=bool)
             for st in env.states:
                 if env.is_terminal(st):
                     continue
@@ -321,7 +325,7 @@ def plot_td_stabilization(history: dict):
 
 
 def main():
-    policy_path = "./outputs/policy_iteration/optimal_policy.npz"
+    policy_path = "./outputs/gridworld/policy_iteration/optimal_policy.npz"
     pi_opt, V_opt, gamma, meta = load_policy(policy_path)
 
     env = GridWorld(
@@ -332,6 +336,10 @@ def main():
         slip_prob=float(meta["slip_prob"]),
         seed=None if int(meta["seed"]) == -1 else int(meta["seed"]),
     )
+
+    nS = max(env.states) + 1
+    assert pi_opt.shape[0] >= nS, f"Policy has {pi_opt.shape[0]} states, env needs {nS}"
+    assert V_opt.shape[0] >= nS, f"V_opt has {V_opt.shape[0]} states, env needs {nS}"
 
     print(
         "[WARNING] TD(0) and TD(λ) is being run with a fixed start-state reset.\n"

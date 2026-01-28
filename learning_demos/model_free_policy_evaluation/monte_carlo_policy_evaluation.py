@@ -1,4 +1,4 @@
-from envs.gridworld import GridWorld
+from envs.tabular.gridworld import GridWorld
 from utils.utils import rollout_episode, load_policy
 import matplotlib.pyplot as plt
 from typing import Tuple, List
@@ -44,9 +44,10 @@ def first_visit_mc_prediction(
     - First-visit MC can have high variance and may converge slowly, especially
       in large or stochastic environments.
     """
-    N = np.zeros(env.n_states, dtype=np.int64)   # visit counts
-    G_sum = np.zeros(env.n_states, dtype=np.float64)  # sum of returns
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    N = np.zeros(nS, dtype=np.int64)
+    G_sum = np.zeros(nS, dtype=np.float64)
+    V_pi = np.zeros(nS, dtype=np.float64)
 
     for ep in range(1, num_episodes+1):
         
@@ -110,9 +111,11 @@ def every_visit_mc_prediction(
       more samples per episode, but it can overweight states that appear many
       times within long episodes.
     """
-    N = np.zeros(env.n_states, dtype=np.int64)   # visit counts
-    G_sum = np.zeros(env.n_states, dtype=np.float64)  # sum of returns
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    N = np.zeros(nS, dtype=np.int64)
+    G_sum = np.zeros(nS, dtype=np.float64)
+    V_pi = np.zeros(nS, dtype=np.float64)
+
 
     for ep in range(1, num_episodes+1):
         
@@ -195,9 +198,10 @@ def first_visit_mc_prediction_with_history(
         (# of eligible states in mask) / (# of non-wall states).
     - Returns are computed in O(T) per episode via a backward pass.
     """
-    N = np.zeros(env.n_states, dtype=np.int64)
-    G_sum = np.zeros(env.n_states, dtype=np.float64)
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    N = np.zeros(nS, dtype=np.int64)
+    G_sum = np.zeros(nS, dtype=np.float64)
+    V_pi = np.zeros(nS, dtype=np.float64)
 
     episodes = []
     rmse_hist = []
@@ -224,7 +228,7 @@ def first_visit_mc_prediction_with_history(
 
         if ep % eval_every == 0 or ep == 1:
             # compare only on sufficiently visited, non-terminal, non-wall states
-            mask = np.zeros(env.n_states, dtype=bool)
+            mask = np.zeros(nS, dtype=bool)
             for s in env.states:
                 if env.is_terminal(s):
                     continue
@@ -322,9 +326,10 @@ def every_visit_mc_prediction_with_history(
       min_visits threshold sooner (higher coverage earlier) because
       repeated visits within an episode count toward N[s].
     """
-    N = np.zeros(env.n_states, dtype=np.int64)
-    G_sum = np.zeros(env.n_states, dtype=np.float64)
-    V_pi = np.zeros(env.n_states, dtype=np.float64)
+    nS = max(env.states) + 1
+    N = np.zeros(nS, dtype=np.int64)
+    G_sum = np.zeros(nS, dtype=np.float64)
+    V_pi = np.zeros(nS, dtype=np.float64)
 
     episodes = []
     rmse_hist = []
@@ -348,7 +353,7 @@ def every_visit_mc_prediction_with_history(
 
         if ep % eval_every == 0 or ep == 1:
             # compare only on sufficiently visited, non-terminal, non-wall states
-            mask = np.zeros(env.n_states, dtype=bool)
+            mask = np.zeros(nS, dtype=bool)
             for s in env.states:
                 if env.is_terminal(s):
                     continue
@@ -432,7 +437,7 @@ def plot_mc_stabilization(history: dict):
 
 
 def main():
-    policy_path = "./outputs/policy_iteration/optimal_policy.npz"
+    policy_path = "./outputs/gridworld/policy_iteration/optimal_policy.npz"
     pi_opt, V_opt, gamma, meta = load_policy(policy_path)
 
     env = GridWorld(
@@ -443,6 +448,11 @@ def main():
         slip_prob=float(meta["slip_prob"]),
         seed=None if int(meta["seed"]) == -1 else int(meta["seed"]),
     )
+
+    nS = max(env.states) + 1
+    assert pi_opt.shape[0] >= nS, f"Policy has {pi_opt.shape[0]} states, env needs {nS}"
+    assert V_opt.shape[0] >= nS, f"V_opt has {V_opt.shape[0]} states, env needs {nS}"
+
 
     print(
         "[WARNING] Monte Carlo policy evaluation is being run on-policy with\n"
