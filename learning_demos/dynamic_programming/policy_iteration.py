@@ -15,8 +15,8 @@ def iterative_policy_evaluation(env: TabularEnvironment, pi: np.ndarray, tol: fl
 
     Parameters
     ----------
-    env : GridWorld
-        The GridWorld environment instance providing transition and reward model
+    env : TabularEnvironment
+        The TabularEnvironment environment instance providing transition and reward model
     pi : np.ndarray
         Policy to evaluate, shape (n_states, n_actions).
         pi[s, a] = probability of taking action a in state s.
@@ -88,8 +88,8 @@ def policy_iteration(env: TabularEnvironment, tol: float = 1e-6, max_iter: int =
 
     Parameters
     ----------
-    env : GridWorld
-        The GridWorld environment instance
+    env : TabularEnvironment
+        The TabularEnvironment environment instance
     tol : float, optional
         Convergence tolerance for policy evaluation, by default 1e-6
     max_iter : int, optional

@@ -141,7 +141,7 @@ class GridWorld(TabularEnvironment):
         # Episode tracking
         self._terminated = False
         self._step_count = 0
-        self._max_steps = height * width * 10  # Prevent infinite episodes
+        self._max_steps = height * width  # Prevent infinite episodes
         
         # Cache transition model for DP methods
         self._transition_cache: Optional[Dict] = None
@@ -422,6 +422,20 @@ class GridWorld(TabularEnvironment):
     def terminal_states(self) -> Set[int]:
         """Return set of terminal state indices."""
         return self.trap_states | {self.goal_state}
+    
+    @property
+    def n_states(self) -> int:
+        """
+        Number of states in the environment.
+
+        Notes
+        -----
+        GridWorld uses global state indexing: state = row * width + col,
+        so valid state ids are in [0, height*width - 1] even though `states`
+        excludes walls.
+        """
+        return self.height * self.width
+
     
     def is_terminal(self, state: int) -> bool:
         """Check if state is terminal."""

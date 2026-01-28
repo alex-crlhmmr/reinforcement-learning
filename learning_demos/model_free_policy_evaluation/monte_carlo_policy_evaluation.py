@@ -1,5 +1,6 @@
+from envs.base import TabularEnvironment
 from envs.tabular.gridworld import GridWorld
-from utils.utils import rollout_episode, load_policy
+from utils.utils import rollout_episode_tabular, load_policy
 import matplotlib.pyplot as plt
 from typing import Tuple, List
 import numpy as np
@@ -7,7 +8,7 @@ import numpy as np
 
 
 def first_visit_mc_prediction(
-        env: GridWorld, 
+        env: TabularEnvironment, 
         pi: np.ndarray, 
         num_episodes: int = 5000, 
         gamma: float = 0.9) -> np.ndarray:
@@ -19,8 +20,8 @@ def first_visit_mc_prediction(
 
     Parameters
     ----------
-    env : GridWorld
-        The GridWorld environment instance.
+    env : TabularEnvironment
+        The TabularEnvironment environment instance.
     pi : np.ndarray
         Policy to evaluate, shape (n_states, n_actions).
         pi[s, a] = probability of taking action a in state s.
@@ -54,7 +55,7 @@ def first_visit_mc_prediction(
         if ep % 500 == 0:
             print(f"Episode {ep}/{num_episodes} ...")
         
-        states, rewards, _ = rollout_episode(env, pi)
+        states, rewards, _ = rollout_episode_tabular(env, pi)
 
         G_episode = np.zeros(len(rewards), dtype=np.float64)
         G = 0.0
@@ -74,8 +75,9 @@ def first_visit_mc_prediction(
 
 
 def every_visit_mc_prediction(
-        env: GridWorld, pi: 
-        np.ndarray, num_episodes: int = 5000, 
+        env: TabularEnvironment, 
+        pi: np.ndarray, 
+        num_episodes: int = 5000, 
         gamma: float = 0.9) -> np.ndarray:
     """
     Estimate the value function V^π using Every-Visit Monte Carlo prediction.
@@ -86,8 +88,8 @@ def every_visit_mc_prediction(
 
     Parameters
     ----------
-    env : GridWorld
-        The GridWorld environment instance.
+    env : TabularEnvironment
+        The TabularEnvironment environment instance.
     pi : np.ndarray
         Policy to evaluate, shape (n_states, n_actions).
         pi[s, a] = probability of taking action a in state s.
@@ -122,7 +124,7 @@ def every_visit_mc_prediction(
         if ep % 500 == 0:
             print(f"Episode {ep}/{num_episodes} ...")
         
-        states, rewards, _ = rollout_episode(env, pi)
+        states, rewards, _ = rollout_episode_tabular(env, pi)
 
         G_episode = np.zeros(len(rewards), dtype=np.float64)
         G = 0.0
@@ -139,7 +141,7 @@ def every_visit_mc_prediction(
 
 
 def first_visit_mc_prediction_with_history(
-        env: GridWorld,
+        env: TabularEnvironment,
         pi: np.ndarray,
         V_ref: np.ndarray,
         num_episodes: int = 5000,
@@ -155,8 +157,8 @@ def first_visit_mc_prediction_with_history(
 
     Parameters
     ----------
-    env : GridWorld
-        The GridWorld environment instance.
+    env : TabularEnvironment
+        The TabularEnvironment environment instance.
     pi : np.ndarray
         Policy to evaluate, shape (n_states, n_actions).
         pi[s, a] = probability of taking action a in state s.
@@ -209,7 +211,7 @@ def first_visit_mc_prediction_with_history(
     coverage_hist = []
 
     for ep in range(1, num_episodes + 1):
-        states, rewards, _ = rollout_episode(env, pi)
+        states, rewards, _ = rollout_episode_tabular(env, pi)
 
         G_episode = np.zeros(len(rewards), dtype=np.float64)
         G = 0.0
@@ -264,7 +266,7 @@ def first_visit_mc_prediction_with_history(
 
 
 def every_visit_mc_prediction_with_history(
-        env: GridWorld,
+        env: TabularEnvironment,
         pi: np.ndarray,
         V_ref: np.ndarray,
         num_episodes: int = 5000,
@@ -280,8 +282,8 @@ def every_visit_mc_prediction_with_history(
 
     Parameters
     ----------
-    env : GridWorld
-        The GridWorld environment instance.
+    env : TabularEnvironment
+        The TabularEnvironment environment instance.
     pi : np.ndarray
         Policy to evaluate, shape (n_states, n_actions).
         pi[s, a] = probability of taking action a in state s.
@@ -337,7 +339,7 @@ def every_visit_mc_prediction_with_history(
     coverage_hist = []
 
     for ep in range(1, num_episodes + 1):
-        states, rewards, _ = rollout_episode(env, pi)
+        states, rewards, _ = rollout_episode_tabular(env, pi)
 
         G_episode = np.zeros(len(rewards), dtype=np.float64)
         G = 0.0
