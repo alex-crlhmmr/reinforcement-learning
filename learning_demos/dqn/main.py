@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 from config import Config 
 from trainer import Trainer
 import gymnasium as gym
-import torch
 import random
+import torch
+import time
+import os
 
 
 
@@ -14,17 +16,17 @@ cfg = Config(
     env_name="CartPole-v1",
     hidden_size=(128, 128, 128),
     seed=42,
-    gamma=0.90,
+    gamma=0.99,
     epsilon_start=1.0,
     epsilon_end=0.01,
-    epsilon_decay=1000,
+    epsilon_decay=50000,
     lr=1e-3,
     loss_fn="mse",
     batch_size=100,
-    memory_capacity=5000,
-    target_update_freq=1000,
-    max_steps=100000,
-    eval_freq=1000
+    memory_capacity=100_000,
+    target_update_freq=500,
+    max_steps=120_000,
+    eval_freq=5000,
 )
 
 loss_map = {
@@ -55,7 +57,16 @@ def main():
     buffer = ReplayBuffer(capacity=cfg.memory_capacity)
     trainer = Trainer(env, agent, buffer, cfg)
     rewards = trainer.train()
-    plt.plot(rewards)
+
+    os.makedirs("outputs/dqn/vanilla", exist_ok=True)                                                                                                                     
+    torch.save(agent.online_net.state_dict(), f"outputs/dqn/vanilla/{cfg.env_name}{cfg.seed}_{int(time.time())}.pth")
+    
+
+    plt.plot(rewards)                                                                                                                                          
+    plt.xlabel("Episode")                                                                                                                                      
+    plt.ylabel("Reward")
+    plt.title(f"DQN Training Rewards - {cfg.env_name} (Seed: {cfg.seed})")                                                                                                                                     
+    plt.show() 
 
 
     

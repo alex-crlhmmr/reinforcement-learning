@@ -13,11 +13,11 @@ class Trainer:
         self.config = config
 
     def train(self):
+        episode_rewards = []
         while self.agent.step < self.config.max_steps:
             obs, _ = self.env.reset(seed=cfg.seed)
             done = False
             episode_reward = 0
-            episode_rewards = []
             while not done:
                 action = self.agent.act(obs)
                 next_obs, reward, terminated, truncated, _ = self.env.step(action)
