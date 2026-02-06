@@ -1,4 +1,4 @@
-from envs.base import TabularEnvironment
+from envs.base_env import TabularEnvironment
 from envs.tabular.gridworld import GridWorld
 from utils.utils import load_policy
 from typing import Tuple, Dict

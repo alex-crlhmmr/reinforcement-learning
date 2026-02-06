@@ -1,4 +1,4 @@
-from envs.base import TabularEnvironment
+from envs.base_env import TabularEnvironment
 from envs.tabular.gridworld import GridWorld
 from utils.utils import rollout_episode_tabular, evaluate_policy_tabular, load_policy
 from typing import Tuple
@@ -72,7 +72,7 @@ def main():
 
     pi_mc, Q_mc = monte_carlo_policy_improvement(
         env,
-        num_episodes=80000,
+        num_episodes=100000,
         gamma=gamma,
         first_visit=True,
     )

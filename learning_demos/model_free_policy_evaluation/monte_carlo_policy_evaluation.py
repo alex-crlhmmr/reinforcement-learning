@@ -1,4 +1,4 @@
-from envs.base import TabularEnvironment
+from envs.base_env import TabularEnvironment
 from envs.tabular.gridworld import GridWorld
 from utils.utils import rollout_episode_tabular, load_policy
 import matplotlib.pyplot as plt

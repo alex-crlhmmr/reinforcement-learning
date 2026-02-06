@@ -22,7 +22,7 @@ from typing import Tuple, Dict, List, Optional, Set
 from collections import deque
 from enum import IntEnum
 
-from envs.base import TabularEnvironment
+from envs.base_env import TabularEnvironment
 
 
 
@@ -363,6 +363,12 @@ class GridWorld(TabularEnvironment):
         
         return next_state, reward, terminated, truncated, info
     
+    def state_to_obs(self, state):
+        """Convert state index to observation (row, col)."""
+        row = state // self.width                                                                                                                                                     
+        col = state // self.height
+        return np.array([row, col], dtype=np.float32)                                                                                                                                 
+        
     def _get_actual_action(self, intended_action: Action) -> Action:
         """Determine actual action after possible slip."""
         if self.slip_prob > 0 and self.rng.random() < self.slip_prob:
@@ -400,6 +406,7 @@ class GridWorld(TabularEnvironment):
             return -100.0
         else:
             return -1.0  # Step cost
+
     
     # ==================== Model-Based Interface (for DP) ====================
     
