@@ -1,10 +1,11 @@
-from ppo_agent import PPOAgent
-from critic import BaseCritic
-from actor import GaussianActor
+from torch.utils.tensorboard import SummaryWriter
 from rollout_buffer import RolloutBuffer
 import matplotlib.pyplot as plt
-from config import Config
+from actor import GaussianActor
 from trainer import PPOTrainer
+from ppo_agent import PPOAgent
+from critic import BaseCritic
+from config import Config
 import gymnasium as gym
 import random
 import torch
@@ -13,10 +14,10 @@ import os
 
 
 cfg = Config(
-    env_name="LunarLanderContinuous-v2",
+    env_name="Humanoid-v4",
     seed=42,
-    critic_hidden_sizes=(128, 128, 128),
-    actor_hidden_sizes=(128, 128, 128),
+    critic_hidden_sizes=(256, 256, 256),
+    actor_hidden_sizes=(256, 256, 256),
     lr=3e-4,
     clip_epsilon=0.2,
     num_epochs=10,
@@ -24,13 +25,13 @@ cfg = Config(
     value_coef=0.5,
     max_grad_norm=0.5,
     rollout_steps=2048,
-    mini_batch_size=64,
+    mini_batch_size=256,
     gamma=0.99,
     gae_lambda=0.95,
-    max_training_steps=120_000,
-    eval_freq=5000,
+    max_training_steps=20_000_000,
+    eval_freq=10000,
     save_path="./outputs/ppo/vanilla"
-)
+)                                                                                     
 
 
 def main():
@@ -75,11 +76,14 @@ def main():
         device=device,
     )
 
+    writer = SummaryWriter(f"runs/ppo_{cfg.env_name}")
+
     trainer = PPOTrainer(
         env=env,
         agent=agent,
         buffer=buffer,
-        config=cfg
+        config=cfg,
+        writer=writer
     )
 
     rewards = trainer.train()
@@ -96,7 +100,6 @@ def main():
     plt.show() 
 
 
-    
-
 if __name__ == "__main__":
+    # tensorboard --logdir runs
     main()

@@ -1,18 +1,20 @@
+from actor import GaussianActor, CategoricalActor
+from torch.utils.tensorboard import SummaryWriter
+from rollout_buffer import RolloutBuffer
 from config import Config as cfg
 from gymnasium import Env as env
 from ppo_agent import PPOAgent
-from rollout_buffer import RolloutBuffer
-from actor import GaussianActor, CategoricalActor
 import numpy as np
 import torch
 
 
 class PPOTrainer:
-    def __init__(self, env: env, agent: PPOAgent, buffer: RolloutBuffer, config: cfg):
+    def __init__(self, env: env, agent: PPOAgent, buffer: RolloutBuffer, config: cfg, writer: SummaryWriter = None):
         self.env = env
         self.agent = agent
         self.buffer = buffer
         self.config = config
+        self.writer = writer
 
     def train(self):
         episode_rewards = []
@@ -40,7 +42,10 @@ class PPOTrainer:
 
                     if done:
                         episode_rewards.append(episode_reward)
-                        print(f"Step: {total_steps}, Episode Reward: {episode_reward}")
+                        if self.writer:
+                            self.writer.add_scalar("Reward/Episode", episode_reward, total_steps)
+                        else:
+                            print(f"Step: {total_steps}, Episode Reward: {episode_reward}")
                         episode_reward = 0
                         obs, _ = self.env.reset()
                     else:
@@ -48,7 +53,10 @@ class PPOTrainer:
 
                     if total_steps % self.config.eval_freq == 0:
                         eval_reward = self.evaluate()
-                        print(f"Step: {total_steps}, Eval Reward: {eval_reward}")
+                        if self.writer:
+                            self.writer.add_scalar("Reward/Eval", eval_reward, total_steps)
+                        else:
+                            print(f"Step: {total_steps}, Eval Reward: {eval_reward}")
 
             # GAE + Update + Reset
             with torch.no_grad():
