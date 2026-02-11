@@ -13,7 +13,7 @@ import os
 
 
 cfg = Config(
-    env_name="CartPole-v1",
+    env_name="LunarLander-v3",
     hidden_size=(128, 128, 128),
     seed=42,
     gamma=0.99,

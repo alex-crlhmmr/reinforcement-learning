@@ -34,7 +34,7 @@ class DQNAgent(BaseAgent):
         
 
     def act(self, obs, explore: bool = True):
-        
+        """Epsilon-greedy action selection."""
         if explore and random.random() < self.epsilon:
             return random.randint(0, self.num_actions - 1)
         obs_tensor = self.as_tensor(obs, dtype=torch.float32).unsqueeze(0) 
@@ -42,10 +42,11 @@ class DQNAgent(BaseAgent):
         with torch.no_grad():
             q_values = self.online_net(obs_tensor)
         
-        return q_values.argmax(dim =1).item()
+        return q_values.argmax(dim=1).item()
         
 
     def update(self, batch: tuple):
+        """Update the online network using a batch of transitions from the replay buffer."""
         states, actions, rewards, next_states, dones = batch
         q_values = self.online_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)  
         
