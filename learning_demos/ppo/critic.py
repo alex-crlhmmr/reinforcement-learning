@@ -4,7 +4,7 @@ import torch
 
 
 
-class Critic(nn.Module):
+class BaseCritic(nn.Module):
 
     def __init__(self, device: torch.device, obs_dim: int, hidden_sizes: list):
         super().__init__()

@@ -27,4 +27,33 @@ class RolloutBuffer:
         self.values[self.ptr] = value
         self.ptr += 1
 
-    def compute_GAE(self, )
+    def compute_gae(self, last_value, gamma, gae_lambda):                                                                                       
+        gae = 0                                                                                                                                 
+        for t in reversed(range(self.rollout_steps)): 
+            if t == self.rollout_steps - 1:                                                                                                
+                next_value = last_value
+            else:
+                next_value = self.values[t + 1]
+
+            delta = self.rewards[t] + gamma * next_value * (1 - self.dones[t]) - self.values[t]
+            gae = delta + gamma * gae_lambda * (1 - self.dones[t]) * gae
+            self.advantages[t] = gae
+        
+        self.returns = self.advantages + self.values
+        self.advantages = (self.advantages - self.advantages.mean()) / (self.advantages.std() + 1e-8)
+
+
+    def get_batches(self, mini_batch_size):                                                                                                     
+        indices = torch.randperm(self.rollout_steps)
+        for start in range(0, self.rollout_steps, mini_batch_size):
+            batch_idx = indices[start:start + mini_batch_size]
+            yield (
+                self.states[batch_idx],
+                self.actions[batch_idx],
+                self.log_probs[batch_idx],
+                self.returns[batch_idx],
+                self.advantages[batch_idx],
+            )
+
+    def reset(self):
+        self.ptr = 0

@@ -21,6 +21,12 @@ class BaseActor(nn.Module, ABC):
         """ Given an observation, return a distribution over actions."""
         pass
 
+    @abstractmethod
+    def evaluate(self, obs, actions) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Given stored obs and actions, return log_probs and entropy under current policy."""
+        pass
+
+
 class GaussianActor(BaseActor):
 
     def __init__(self, device: torch.device, obs_dim: int, action_dim: int, hidden_sizes: list):
@@ -39,6 +45,12 @@ class GaussianActor(BaseActor):
         std = torch.exp(self.log_std)
         return Normal(mean, std)
     
+    def evaluate(self, obs, actions) -> Tuple[torch.Tensor, torch.Tensor]:
+        dist = self.forward(obs)
+        log_probs = dist.log_prob(actions).sum(dim=-1) 
+        entropy = dist.entropy().sum(dim=-1)
+        return log_probs, entropy
+    
 
 class CategoricalActor(BaseActor):
 
@@ -55,5 +67,11 @@ class CategoricalActor(BaseActor):
     def forward(self, obs) -> Distribution:
         logits = self.actor_net(obs)
         return Categorical(logits=logits)
+    
+    def evaluate(self, obs, actions) -> Tuple[torch.Tensor, torch.Tensor]:
+        dist = self.forward(obs)
+        log_probs = dist.log_prob(actions)
+        entropy = dist.entropy()
+        return log_probs, entropy
 
    
